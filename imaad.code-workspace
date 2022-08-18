@@ -1,0 +1,14 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "../../../../../media/disk2/proj_embedding_aug"
+		},
+		{
+			"path": "../../../../../media/disk2/prostate/SICAPv2"
+		}
+	],
+	"settings": {}
+}
