@@ -73,7 +73,7 @@ class Attn_Net_Gated(nn.Module):
 
 
 class SingleTaskAttentionMILClassifier(nn.Module):
-    def __init__(self, gate = True, size_arg = "big", dropout = False, n_classes = 2):
+    def __init__(self, gate = True, size_arg = "big", dropout = False, n_classes = 6):
         super(SingleTaskAttentionMILClassifier, self).__init__()
         self.size_dict = {"small": [1024, 512, 256], "big": [1024, 512, 384]}
         size = self.size_dict[size_arg]

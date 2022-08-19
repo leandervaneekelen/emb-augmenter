@@ -11,8 +11,8 @@ import torch.nn as nn
 import numpy as np
 import mlflow 
 import os
-from sksurv.metrics import concordance_index_censored
 from models.model_attention_mil import SingleTaskAttentionMILClassifier
+
 
 def step(cur, args, loss_fn, model, optimizer, train_loader, val_loader, test_loader, early_stopping):
     
@@ -27,15 +27,14 @@ def step(cur, args, loss_fn, model, optimizer, train_loader, val_loader, test_lo
     else:
         torch.save(model.state_dict(), os.path.join(args.results_dir, "s_{}_checkpoint.pt".format(cur)))
 
-    _, val_metric = summary(model, args.model_type, val_loader, loss_fn)
-    print('Final Val metric: {:.4f}'.format(val_metric))
+    val_loss = summary(model, val_loader, loss_fn)
+    print('Final Val loss: {:.4f}'.format(val_loss))
 
-    results_dict, test_metric, = summary(model, args.model_type, test_loader, loss_fn)
-    print('Final Test metric: {:.4f}'.format(test_metric))
+    test_loss = summary(model, test_loader, loss_fn)
+    print('Final Test loss: {:.4f}'.format(test_loss))
 
-    mlflow.log_metric("final_val_fold{}".format(cur), val_metric)
-    mlflow.log_metric("final_test_fold{}".format(cur), test_metric)
-    return val_metric, results_dict, test_metric
+    mlflow.log_metric("final_test_fold{}".format(cur), test_loss)
+    return val_loss, test_loss
 
 def init_early_stopping(args):
     print('\nSetup EarlyStopping...', end=' ')
@@ -49,9 +48,9 @@ def init_early_stopping(args):
 
 def init_loaders(args, train_split, val_split, test_split):
     print('\nInit Loaders...', end=' ')
-    train_loader = get_split_loader(args, train_split, training=True, testing = args.testing, weighted = args.weighted_sample, batch_size = args.batch_size)
-    val_loader = get_split_loader(args, val_split,  testing = args.testing, batch_size = args.batch_size)
-    test_loader = get_split_loader(args, test_split, testing = args.testing, batch_size = args.batch_size)
+    train_loader = get_split_loader(args, train_split, training=True, batch_size = args.batch_size)
+    val_loader = get_split_loader(args, val_split,  training=False, batch_size = args.batch_size)
+    test_loader = get_split_loader(args, test_split, training = False, batch_size = args.batch_size)
     print('Done!')
     return train_loader,val_loader,test_loader
 
@@ -64,78 +63,68 @@ def init_optim(args, model):
 def init_model(args):
     print('\nInit Model...', end=' ')
     model = SingleTaskAttentionMILClassifier(args)
-    model = model.to(torch.device('cuda'))
     print_network(args.results_dir, model)
     return model
 
 def init_loss_function(args):
     print('\nInit loss function...', end=' ')
-    # @TODO: define loss function. 
     loss_fn = nn.CrossEntropyLoss()
     return loss_fn
 
-def get_splits(datasets, cur, args):
-    print('\nTraining Fold {}!'.format(cur))
-    print('\nInit train/val/test splits...', end=' ')
-    train_split, val_split, test_split = datasets
-    # save_splits(datasets, ['train', 'val', 'test'], os.path.join(args.results_dir, 'splits_{}.csv'.format(cur)))
-    print('Done!')
-    print("Training on {} samples".format(len(train_split)))
-    print("Validating on {} samples".format(len(val_split)))
-    print("Testing on {} samples".format(len(test_split)))
-    return train_split,val_split,test_split 
-
 def train_loop(epoch, cur, model, loader, optimizer, loss_fn):
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model.train()
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    model.train().to(device)
 
     total_loss = 0.
     
-    for batch_idx, data in enumerate(loader):
+    for patch_embs, label in loader:
 
-        # @TODO: GAN training goes here. 
-        loss = torch.tensor([0.])
-        loss_value = 0.
-        total_loss += loss_value 
+        # set data on device 
+        patch_embs = patch_embs.squeeze().to(device)
+        label = label.to(device)
+
+        # forward pass 
+        logits, Y_prob, Y_hat, A_raw, results_dict = model(patch_embs)
+
+        # compute loss 
+        loss = loss_fn(logits, label)
 
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
 
-        if (batch_idx % 20) == 0:
-            print("batch: {}, loss: {:.3f}".format(batch_idx, loss_value))
+        loss_value = loss.item()
+        total_loss += loss_value 
 
     total_loss /= len(loader)
 
-    print('Epoch: {}, train_loss: {:.4f}, train_metric: {:.4f}'.format(epoch, total_loss, 0.))
+    print('Epoch: {}, train_loss: {:.4f}'.format(epoch, total_loss))
 
     mlflow.log_metric("train_loss_fold{}".format(cur), total_loss)
-    mlflow.log_metric("train_cindex_fold{}".format(cur), 0.)
 
     return 0., total_loss
 
 
 def validate(cur, epoch, model, loader, early_stopping, loss_fn = None, results_dir = None):
 
-    device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model.eval()
-
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    model.eval().to(device)
     total_loss = 0.
-
+    
     with torch.no_grad():
+        for patch_embs, label in loader:
 
-        for batch_idx, data in enumerate(loader):
-            # @TODO: GAN forward pass 
-            loss = loss_fn()
-            loss_value = loss.item()
-            total_loss += loss_value 
+            patch_embs = patch_embs.squeeze().to(device)
+            label = label.to(device)
+            logits, Y_prob, Y_hat, A_raw, results_dict = model(patch_embs)
+            loss = loss_fn(logits, label)
+            total_loss += loss.item()
 
     total_loss /= len(loader)
 
-    print('Epoch: {}, val_loss: {:.4f}, val_c_index: {:.4f}'.format(epoch, total_loss, 0.))
+    print('Epoch: {}, val_loss: {:.4f}'.format(epoch, total_loss))
 
     mlflow.log_metric("val_loss_fold{}".format(cur), total_loss)
-    mlflow.log_metric("val_metric_fold{}".format(cur), 0.)
 
     if early_stopping:
         assert results_dir
@@ -148,26 +137,28 @@ def validate(cur, epoch, model, loader, early_stopping, loss_fn = None, results_
     return False
 
 def summary(model, loader, loss_fn):
-    device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model.eval()
-
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    model.eval().to(device)
     total_loss = 0.
-
+    
     with torch.no_grad():
+        for patch_embs, label in loader:
+            patch_embs = patch_embs.squeeze().to(device)
+            label = label.to(device)
+            logits, Y_prob, Y_hat, A_raw, results_dict = model(patch_embs)
+            loss = loss_fn(logits, label)
+            total_loss += loss.item()
 
-        for batch_idx, data in enumerate(loader):
-            pass
-            # @TODO: GAN testing 
-    return None
+    total_loss /= len(loader)
 
-def train_val_test(datasets, args):
+    return total_loss
+
+
+def train_val_test(train_split, val_split, test_split, args, cur):
     """   
     Performs train val test for the fold over number of epochs
     """
 
-    #----> gets splits and summarize
-    train_split, val_split, test_split = get_splits(datasets, args)
-    
     #----> init loss function
     loss_fn = init_loss_function(args)
 
@@ -184,6 +175,6 @@ def train_val_test(datasets, args):
     early_stopping = init_early_stopping(args)
 
     #---> do train val test
-    val_cindex, results_dict, test_cindex = step(cur, args, loss_fn, model, optimizer, train_loader, val_loader, test_loader, early_stopping)
+    val_cindex, test_cindex = step(cur, args, loss_fn, model, optimizer, train_loader, val_loader, test_loader, early_stopping)
 
-    return results_dict, test_cindex, val_cindex
+    return test_cindex, val_cindex
