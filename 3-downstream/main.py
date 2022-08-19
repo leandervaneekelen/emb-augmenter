@@ -66,7 +66,7 @@ if __name__ == "__main__":
                 'bag_loss': args.bag_loss,
                 'seed': args.seed,
                 'model_type': args.model_type,
-                "use_drop_out": args.drop_out,
+                'use_drop_out': args.drop_out,
                 'weighted_sample': args.weighted_sample,
                 'opt': args.opt}
 

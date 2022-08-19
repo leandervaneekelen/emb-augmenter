@@ -1,8 +1,7 @@
 #----> internal imports
 from inspect import trace
-from datasets.datasets import save_splits
+# from datasets.dataset import save_splits
 from utils.utils import EarlyStopping, get_optim, get_split_loader, print_network
-from utils.loss_func import *
 
 #----> pytorch imports
 import torch
@@ -13,6 +12,7 @@ import numpy as np
 import mlflow 
 import os
 from sksurv.metrics import concordance_index_censored
+from models.model_attention_mil import SingleTaskAttentionMILClassifier
 
 def step(cur, args, loss_fn, model, optimizer, train_loader, val_loader, test_loader, early_stopping):
     
@@ -63,7 +63,7 @@ def init_optim(args, model):
 
 def init_model(args):
     print('\nInit Model...', end=' ')
-    model = DAGAN(args)
+    model = SingleTaskAttentionMILClassifier(args)
     model = model.to(torch.device('cuda'))
     print_network(args.results_dir, model)
     return model
@@ -71,14 +71,14 @@ def init_model(args):
 def init_loss_function(args):
     print('\nInit loss function...', end=' ')
     # @TODO: define loss function. 
-    loss_fn = nn.BCELoss()
+    loss_fn = nn.CrossEntropyLoss()
     return loss_fn
 
 def get_splits(datasets, cur, args):
     print('\nTraining Fold {}!'.format(cur))
     print('\nInit train/val/test splits...', end=' ')
     train_split, val_split, test_split = datasets
-    save_splits(datasets, ['train', 'val', 'test'], os.path.join(args.results_dir, 'splits_{}.csv'.format(cur)))
+    # save_splits(datasets, ['train', 'val', 'test'], os.path.join(args.results_dir, 'splits_{}.csv'.format(cur)))
     print('Done!')
     print("Training on {} samples".format(len(train_split)))
     print("Validating on {} samples".format(len(val_split)))
