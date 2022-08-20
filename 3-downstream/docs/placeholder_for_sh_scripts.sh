@@ -1,1 +1,0 @@
-python main.py --max_epochs=100 --drop_out=False --lr=0.0001
