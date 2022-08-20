@@ -44,7 +44,18 @@ def step(cur, args, loss_fn, model, optimizer, train_loader, val_loader, test_lo
     mlflow.log_metric("final_test_acc_fold{}".format(cur), test_acc)
     mlflow.log_metric("final_test_kappa_fold{}".format(cur), test_kappa)
     mlflow.log_metric("final_test_auc_fold{}".format(cur), test_auc)
-    return val_loss, test_loss
+
+    results = {
+        "val_loss": val_loss,
+        "val_acc": val_acc,
+        "val_kappa": val_kappa,
+        "val_auc": val_auc,
+        "test_loss": test_loss,
+        "test_acc": test_acc,
+        "test_kappa": test_kappa,
+        "test_auc": test_auc,
+    }
+    return results
 
 def init_early_stopping(args):
     print('\nSetup EarlyStopping...', end=' ')
@@ -229,6 +240,6 @@ def train_val_test(train_split, val_split, test_split, args, cur):
     early_stopping = init_early_stopping(args)
 
     #---> do train val test
-    val_cindex, test_cindex = step(cur, args, loss_fn, model, optimizer, train_loader, val_loader, test_loader, early_stopping)
+    results = step(cur, args, loss_fn, model, optimizer, train_loader, val_loader, test_loader, early_stopping)
 
-    return test_cindex, val_cindex
+    return results

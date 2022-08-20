@@ -15,17 +15,25 @@ from timeit import default_timer as timer
 
 #----> main
 def main(args):
+    results = []
 
     for fold_id in range(5):  # 5-fold cross validation 
         train_dataset, val_dataset, test_dataset = args.dataset_factory.return_splits(
             fold_id,
         )
         
-        results  = train_val_test(train_dataset, val_dataset, test_dataset, args, fold_id)
+        fold_results  = train_val_test(train_dataset, val_dataset, test_dataset, args, fold_id)
+        print(fold_results)
+        results.append(fold_results)
 
         #write results to pkl
         filename = os.path.join(args.results_dir, 'split_results.pkl')
-        save_pkl(filename, results)
+        save_pkl(filename, fold_results)
+    
+    # write summary of fold results to csv
+    df = pd.DataFrame.from_records(results)
+    filename = os.path.join(args.results_dir, 'summary.csv')
+    df.to_csv(filename)
 
 
 #----> call main
