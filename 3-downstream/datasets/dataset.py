@@ -7,6 +7,8 @@ import pandas as pd
 import torch
 from torch.utils.data import Dataset
 
+import random
+
 
 class WSIDatasetFactory:
 
@@ -94,32 +96,32 @@ class WSIDataset(Dataset):
 
     def __getitem__(self, idx):
 
-        patch_embs  = self._load_wsi_from_path(self.labels.iloc[idx]['image_id'])
+        patch_embs = self._load_wsi_from_path(self.labels.iloc[idx]['image_id'], augmentation_type=None)
         label = int(self.labels.iloc[idx]['isup_grade'])
         return patch_embs, label
 
     def _load_wsi_from_path(self, slide_id, augmentation_type=None):
         """
-        Load a pair of patch embeddings. 
+        Load a patch embedding. 
         """
         path = os.path.join(self.data_dir, '{}.pt'.format(slide_id))
         patch_embs = torch.load(path)
 
         if augmentation_type is None:
             patch_embs = patch_embs[:, 0, :]  # get the original patch embedding
-        elif augmentation_type == 'mixed':
-            rand_indices = [0] * patch_embs.shape[0]  # get random mixed augmentations 
-            patch_embs = patch_embs[:, :, rand_indices]
         elif augmentation_type == 'rotation':
-            patch_embs = patch_embs[:, :, 1]
+            patch_embs = patch_embs[:, 1, :]
         elif augmentation_type == 'hue':
-            patch_embs = patch_embs[:, :, 2]
+            patch_embs = patch_embs[:, 2, :]
         elif augmentation_type == 'saturation':
-            patch_embs = patch_embs[:, :, 3]
+            patch_embs = patch_embs[:, 3, :]
         elif augmentation_type == 'value':
-            patch_embs = patch_embs[:, :, 4]
+            patch_embs = patch_embs[:, 4, :]
         elif augmentation_type == 'zoom':
-            patch_embs = patch_embs[:, :, 5]
+            patch_embs = patch_embs[:, 5, :]
+        elif augmentation_type == 'combined':
+            rand_index = random.randint(6, 9)  # get a random mixed augmentation 
+            patch_embs = patch_embs[:, rand_index, :]
         else:
             raise ValueError("Augmentation not recognized.")
 
