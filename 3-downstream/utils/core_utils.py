@@ -12,6 +12,7 @@ import numpy as np
 import mlflow 
 import os
 from models.model_attention_mil import SingleTaskAttentionMILClassifier
+from sklearn import metrics
 
 
 def step(cur, args, loss_fn, model, optimizer, train_loader, val_loader, test_loader, early_stopping):
@@ -27,13 +28,22 @@ def step(cur, args, loss_fn, model, optimizer, train_loader, val_loader, test_lo
     else:
         torch.save(model.state_dict(), os.path.join(args.results_dir, "s_{}_checkpoint.pt".format(cur)))
 
-    val_loss = summary(model, val_loader, loss_fn)
+    val_loss, val_acc, val_kappa, val_auc = summary(model, val_loader, loss_fn)
     print('Final Val loss: {:.4f}'.format(val_loss))
+    print('Final Val acc: {:.4f}'.format(val_acc))
+    print('Final Val kappa: {:.4f}'.format(val_kappa))
+    print('Final Val auc: {:.4f}'.format(val_auc))
 
-    test_loss = summary(model, test_loader, loss_fn)
+    test_loss, test_acc, test_kappa, test_auc = summary(model, test_loader, loss_fn)
     print('Final Test loss: {:.4f}'.format(test_loss))
+    print('Final Test acc: {:.4f}'.format(test_acc))
+    print('Final Test kappa: {:.4f}'.format(test_kappa))
+    print('Final Test auc: {:.4f}'.format(test_auc))
 
-    mlflow.log_metric("final_test_fold{}".format(cur), test_loss)
+    mlflow.log_metric("final_test_loss_fold{}".format(cur), test_loss)
+    mlflow.log_metric("final_test_acc_fold{}".format(cur), test_acc)
+    mlflow.log_metric("final_test_kappa_fold{}".format(cur), test_kappa)
+    mlflow.log_metric("final_test_auc_fold{}".format(cur), test_auc)
     return val_loss, test_loss
 
 def init_early_stopping(args):
@@ -110,6 +120,10 @@ def validate(cur, epoch, model, loader, early_stopping, loss_fn = None, results_
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     model.eval().to(device)
     total_loss = 0.
+    total_num = 0
+    total_correct = 0
+
+    y, y_pred = [], []
     
     with torch.no_grad():
         for patch_embs, label in loader:
@@ -120,11 +134,32 @@ def validate(cur, epoch, model, loader, early_stopping, loss_fn = None, results_
             loss = loss_fn(logits, label)
             total_loss += loss.item()
 
+            # labels
+            y.append(label.item())
+            y_pred.append(torch.argmax(Y_prob).item())
+
+            total_num += 1
+            if torch.argmax(Y_prob).item() == label.item():
+                # correct if index of y_pred is equal to label
+                total_correct += 1
+
+            # print(f"logits: {logits}, label: {label}")
+
     total_loss /= len(loader)
+    acc = total_correct / total_num
+    kappa = metrics.cohen_kappa_score(y, y_pred, weights='quadratic')
+    fpr, tpr, thresholds = metrics.roc_curve(y, y_pred, pos_label=2)
+    auc = metrics.auc(fpr, tpr)
 
     print('Epoch: {}, val_loss: {:.4f}'.format(epoch, total_loss))
+    print('Epoch: {}, val_acc: {:.4f}'.format(epoch, acc))
+    print('Epoch: {}, val_kappa: {:.4f}'.format(epoch, kappa))
+    print('Epoch: {}, val_auc: {:.4f}'.format(epoch, auc))
 
     mlflow.log_metric("val_loss_fold{}".format(cur), total_loss)
+    mlflow.log_metric("val_acc_fold{}".format(cur), acc)
+    mlflow.log_metric("val_kappa_fold{}".format(cur), kappa)
+    mlflow.log_metric("val_auc_fold{}".format(cur), auc)
 
     if early_stopping:
         assert results_dir
@@ -140,6 +175,10 @@ def summary(model, loader, loss_fn):
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     model.eval().to(device)
     total_loss = 0.
+    total_num = 0
+    total_correct = 0
+
+    y, y_pred = [], []
     
     with torch.no_grad():
         for patch_embs, label in loader:
@@ -149,9 +188,24 @@ def summary(model, loader, loss_fn):
             loss = loss_fn(logits, label)
             total_loss += loss.item()
 
-    total_loss /= len(loader)
+            # labels
+            y.append(label.item())
+            y_pred.append(torch.argmax(Y_prob).item())
 
-    return total_loss
+            total_num += 1
+            if torch.argmax(Y_prob).item() == label.item():
+                # correct if index of y_pred is equal to label
+                total_correct += 1
+
+            # print(f"logits: {logits}, label: {label}")
+
+    total_loss /= len(loader)
+    acc = total_correct / total_num
+    kappa = metrics.cohen_kappa_score(y, y_pred, weights='quadratic')
+    fpr, tpr, thresholds = metrics.roc_curve(y, y_pred, pos_label=2)
+    auc = metrics.auc(fpr, tpr)
+
+    return total_loss, acc, kappa, auc
 
 
 def train_val_test(train_split, val_split, test_split, args, cur):
