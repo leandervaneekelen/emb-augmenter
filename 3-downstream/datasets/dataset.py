@@ -6,8 +6,7 @@ import pandas as pd
 
 import torch
 from torch.utils.data import Dataset
-
-import random
+import numpy as np
 
 
 class WSIDatasetFactory:
@@ -96,7 +95,7 @@ class WSIDataset(Dataset):
 
     def __getitem__(self, idx):
 
-        patch_embs = self._load_wsi_from_path(self.labels.iloc[idx]['image_id'], augmentation_type=None)
+        patch_embs = self._load_wsi_from_path(self.labels.iloc[idx]['image_id'], augmentation_type='combined')
         label = int(self.labels.iloc[idx]['isup_grade'])
         return patch_embs, label
 
@@ -109,6 +108,7 @@ class WSIDataset(Dataset):
 
         if augmentation_type is None:
             patch_embs = patch_embs[:, 0, :]  # get the original patch embedding
+            print("after:", patch_embs.shape)
         elif augmentation_type == 'rotation':
             patch_embs = patch_embs[:, 1, :]
         elif augmentation_type == 'hue':
@@ -120,8 +120,9 @@ class WSIDataset(Dataset):
         elif augmentation_type == 'zoom':
             patch_embs = patch_embs[:, 5, :]
         elif augmentation_type == 'combined':
-            rand_index = random.randint(6, 9)  # get a random mixed augmentation 
-            patch_embs = patch_embs[:, rand_index, :]
+            patch_indices = np.arange(patch_embs.shape[0])
+            aug_indices = np.random.randint(low=6, high=10, size=patch_embs.shape[0])  # get random mixed augmentation for each patch
+            patch_embs = patch_embs[patch_indices, aug_indices, :]
         else:
             raise ValueError("Augmentation not recognized.")
 
