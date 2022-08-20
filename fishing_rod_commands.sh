@@ -1,4 +1,4 @@
---------- EXTRACT PATCHES ----------
+# --------- EXTRACT PATCHES ----------
 
 python extract_patches.py  \
  --dataroot /media/disk2/proj_embedding_aug \
@@ -6,7 +6,7 @@ python extract_patches.py  \
  --preset tcga.csv --mag_level 40 --patch_size 256 --seg --patch --stitch --fp
 
 
----------- EXTRACT FEATURES ----------
+# ---------- EXTRACT FEATURES ----------
 
 CUDA_VISIBLE_DEVICES=0 python extract_features.py \
  --dataroot /media/disk2/proj_embedding_aug \
