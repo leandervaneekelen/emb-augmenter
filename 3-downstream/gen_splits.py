@@ -18,19 +18,17 @@ def get_dataset_from_csv(path, x_col, y_col):
 def generate_splits(X, y):
     splits = {}
 
-    dataset = []
-
-    X_train_val, X_test, y_train_val, y_test = train_test_split(X, y, test_size=0.20)
-    X_train, X_val, y_train, y_val = train_test_split(X_train_val, y_train_val, test_size=0.25)
+    X_train_val, X_test, y_train_val, y_test = train_test_split(X, y, test_size=0.20, stratify=y)
+    X_train, X_val, y_train, y_val = train_test_split(X_train_val, y_train_val, test_size=0.25, stratify=y_train_val)
 
     splits = {
         "train": X_train,
         "val": X_val,
         "test": X_test,
     }
-    # print(len(splits["train"]))
-    # print(len(splits["val"]))
-    # print(len(splits["test"]))
+    print(len(splits["train"]))
+    print(len(splits["val"]))
+    print(len(splits["test"]))
 
     return splits
 
@@ -49,10 +47,10 @@ def get_split_df(splits):
 if __name__ == "__main__":
     X, y = get_dataset_from_csv(labels_path, "image_id", "isup_grade")
     NUM_SPLITS = 5
-    # print(X[:5])
-    # print(y[:5])
+    print(X[:5])
+    print(y[:5])
 
-    for i in range(5):
+    for i in range(NUM_SPLITS):
         splits = generate_splits(X, y)
         df = get_split_df(splits)
         df.to_csv(os.path.join(split_dir, f"splits_{i}.csv"))
