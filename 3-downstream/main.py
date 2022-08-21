@@ -73,6 +73,7 @@ if __name__ == "__main__":
         csv_path=args.csv_fpath,
         split_dir=args.split_dir,
         seed = args.seed, 
+        augmentation_type = args.augmentation_type,
         print_info = True
         )
     

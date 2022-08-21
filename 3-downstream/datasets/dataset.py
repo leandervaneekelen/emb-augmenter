@@ -16,6 +16,7 @@ class WSIDatasetFactory:
         csv_path,
         split_dir, 
         seed = 7, 
+        augmentation_type = None,
         print_info = True
         ):
         r"""
@@ -35,6 +36,7 @@ class WSIDatasetFactory:
         self.num_classes = 6
         self.split_dir = split_dir
         self.seed = seed
+        self.augmentation_type = augmentation_type
         self.print_info = print_info
 
         #---> summarize
@@ -71,6 +73,7 @@ class WSIDatasetFactory:
                 data_dir=self.data_dir,
                 labels=labels,
                 num_classes=self.num_classes,
+                augmentation_type=self.augmentation_type
             )
         else:
             split_dataset = None
@@ -83,7 +86,8 @@ class WSIDataset(Dataset):
     def __init__(self,
         data_dir, 
         labels,
-        num_classes=8
+        num_classes=8,
+        augmentation_type=None
         ): 
 
         super(WSIDataset, self).__init__()
@@ -92,14 +96,15 @@ class WSIDataset(Dataset):
         self.data_dir = data_dir
         self.labels = labels
         self.num_classes = num_classes
+        self.augmentation_type = augmentation_type
 
     def __getitem__(self, idx):
 
-        patch_embs = self._load_wsi_from_path(self.labels.iloc[idx]['image_id'], augmentation_type='combined')
+        patch_embs = self._load_wsi_from_path(self.labels.iloc[idx]['image_id'], self.augmentation_type)
         label = int(self.labels.iloc[idx]['isup_grade'])
         return patch_embs, label
 
-    def _load_wsi_from_path(self, slide_id, augmentation_type=None):
+    def _load_wsi_from_path(self, slide_id, augmentation_type):
         """
         Load a patch embedding. 
         """
@@ -108,7 +113,6 @@ class WSIDataset(Dataset):
 
         if augmentation_type is None:
             patch_embs = patch_embs[:, 0, :]  # get the original patch embedding
-            print("after:", patch_embs.shape)
         elif augmentation_type == 'rotation':
             patch_embs = patch_embs[:, 1, :]
         elif augmentation_type == 'hue':

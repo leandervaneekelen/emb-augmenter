@@ -92,14 +92,16 @@ def get_custom_exp_code(args):
     Returns:
         - args (NameSpace)
     """
-    exp_code = '_'.join(args.split_dir.split('_')[:2])
     dataset_path = 'datasets_csv'
     param_code = ''
 
-    #----> Study 
-    # param_code += args.study + "_"
+    #----> Augmentation type
+    if args.augmentation_type:
+        param_code += args.augmentation_type
+    else:
+        param_code += "original"
 
-    #----> seed 
+    #----> Seed 
     param_code += "_s{}".format(args.seed)
 
     #----> Learning Rate
@@ -194,7 +196,7 @@ def create_results_dir(args):
         os.mkdir(args.results_dir)
 
 def print_and_log_experiment(args, settings):
-    with open(args.results_dir + '/experiment_{}.txt'.format(args.param_code), 'w') as f:
+    with open(args.results_dir + '/experiment_{}.txt'.format(args.augmentation_type), 'w') as f:
         print(settings, file=f)
 
     f.close()
