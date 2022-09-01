@@ -14,6 +14,7 @@ import math
 from itertools import islice
 import collections
 import mlflow
+from datetime import datetime
 
 device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -36,13 +37,14 @@ class EarlyStopping:
         self.early_stop = False
         self.val_loss_min = np.Inf
 
-    def __call__(self, epoch, val_loss, model, ckpt_name = 'checkpoint.pt'):
+    def __call__(self, epoch, val_loss, models, ckpt_name = 'checkpoint.pt'):
+        val_loss = sum(val_loss.values())
 
         score = -val_loss
 
         if self.best_score is None:
             self.best_score = score
-            self.save_checkpoint(val_loss, model, ckpt_name)
+            self.save_checkpoint(val_loss, models, ckpt_name)
         elif score < self.best_score:
             self.counter += 1
             print(f'EarlyStopping counter: {self.counter} out of {self.patience}')
@@ -50,14 +52,14 @@ class EarlyStopping:
                 self.early_stop = True
         else:
             self.best_score = score
-            self.save_checkpoint(val_loss, model, ckpt_name)
+            self.save_checkpoint(val_loss, models, ckpt_name)
             self.counter = 0
 
-    def save_checkpoint(self, val_loss, model, ckpt_name):
+    def save_checkpoint(self, val_loss, models, ckpt_name):
         '''Saves model when validation loss decrease.'''
         if self.verbose:
             print(f'Validation loss decreased ({self.val_loss_min:.6f} --> {val_loss:.6f}).  Saving model ...')
-        torch.save(model.state_dict(), ckpt_name)
+        torch.save({"G_state_dict": models["net_G"].state_dict(), "D_state_dict": models["net_D"].state_dict()}, ckpt_name)
         self.val_loss_min = val_loss
 
 
@@ -132,12 +134,16 @@ def get_custom_exp_code(args):
     Returns:
         - args (NameSpace)
     """
-    exp_code = '_'.join(args.split_dir.split('_')[:2])
+    # exp_code = '_'.join(args.split_dir.split('_')[:2])
     dataset_path = 'datasets_csv'
     param_code = ''
 
     #----> Study 
-    param_code += args.study + "_"
+    # param_code += exp_code + "_"
+    param_code += "gan"
+
+    #----> model type
+    param_code += "_{}".format(str(args.model_type).lower())
 
     #----> seed 
     param_code += "_s{}".format(args.seed)
@@ -146,16 +152,15 @@ def get_custom_exp_code(args):
     param_code += '_lr%s' % format(args.lr, '.0e')
 
     #----> Regularization
-    if args.reg_type == 'L1':
-      param_code += '_%sreg%s' % (args.reg_type, format(args.reg, '.0e'))
+    param_code += '_%s' % args.reg_type
 
-    if args.reg and args.reg_type == "L2":
-        param_code += "_l2Weight_{}".format(args.reg)
-
-    param_code += '_%s' % args.which_splits.split("_")[0]
+    # param_code += '_%s' % args.which_splits.split("_")[0]
 
     #----> Batch Size
     param_code += '_b%s' % str(args.batch_size)
+
+    #----> Time Stamp to make it unique
+    param_code += '_%s' % datetime.now().strftime("%Y%d%m_%H%M%S")
 
     #----> Updating
     args.param_code = param_code
@@ -175,7 +180,7 @@ def seed_torch(seed=7):
     torch.backends.cudnn.benchmark = False
     torch.backends.cudnn.deterministic = True
 
-def print_network(results_dir, net):
+def print_network(results_dir, net, net_name):
     num_params = 0
     num_params_train = 0
 
@@ -188,7 +193,7 @@ def print_network(results_dir, net):
     print('Total number of parameters: %d' % num_params)
     print('Total number of trainable parameters: %d' % num_params_train)
 
-    fname = "model_" + results_dir.split("/")[-1] + ".txt"
+    fname = "model_" + net_name + "_" + results_dir.split("/")[-1] + ".txt"
     path = os.path.join(results_dir, fname)
     f = open(path, "w")
     f.write(str(net))
@@ -196,6 +201,8 @@ def print_network(results_dir, net):
     f.write('Total number of parameters: %d \n' % num_params)
     f.write('Total number of trainable parameters: %d \n' % num_params_train)
     f.close()
+
+    mlflow.log_param("num_params", num_params_train)
 
 def get_optim(model, args):
     if args.opt == "adam":
@@ -217,11 +224,7 @@ def get_split_loader(args, split_dataset, training = False, testing = False, wei
 
     if not testing:
         if training:
-            if weighted:
-                weights = make_weights_for_balanced_classes_split(split_dataset)
-                loader = DataLoader(split_dataset, batch_size=batch_size, sampler = WeightedRandomSampler(weights, len(weights)), drop_last=True, **kwargs)	
-            else:
-                loader = DataLoader(split_dataset, batch_size=batch_size, sampler = RandomSampler(split_dataset), drop_last=True, **kwargs)
+            loader = DataLoader(split_dataset, batch_size=batch_size, sampler = RandomSampler(split_dataset), drop_last=True, **kwargs)
         else:
             loader = DataLoader(split_dataset, batch_size=batch_size, sampler = SequentialSampler(split_dataset), drop_last=True, **kwargs)
 

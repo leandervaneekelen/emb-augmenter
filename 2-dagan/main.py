@@ -15,27 +15,29 @@ from timeit import default_timer as timer
 
 #----> main
 def main(args):
+    results = []
 
-    train_dataset, val_dataset, test_dataset = args.dataset_factory.return_splits(
-        args,
-        csv_path='{}/splits.csv'.format(args.split_dir)
-    )
+    for fold_id in range(5):  # 5-fold cross validation 
+        train_dataset, val_dataset, test_dataset = args.dataset_factory.return_splits(
+            fold_id,
+        )
+        
+        total_val_loss, total_test_loss  = train_val_test(train_dataset, val_dataset, test_dataset, args, fold_id)
+        print(total_val_loss)
+        print(total_test_loss)
+        fold_results = results.append({
+            "val": total_val_loss,
+            "test": total_test_loss,
+        })
 
-    datasets = (train_dataset, val_dataset, test_dataset)
+        #write results to pkl
+        filename = os.path.join(args.results_dir, 'split_results_{}.pkl'.format(fold_id))
+        save_pkl(filename, fold_results)
     
-    results  = train_val_test(datasets, args)
-
-    #write results to pkl
-    filename = os.path.join(args.results_dir, 'split_results.pkl')
-    save_pkl(filename, results)
-
-    # final_df = pd.DataFrame({'folds': folds, 'val_cindex': all_val_cindex, 'test_cindex': all_test_cindex})
-
-    # if len(folds) != args.k:
-    #     save_name = 'summary_partial_{}_{}.csv'.format(start, end)
-    # else:
-    #     save_name = 'summary.csv'
-    # final_df.to_csv(os.path.join(args.results_dir, save_name))
+    # write summary of fold results to csv
+    df = pd.DataFrame.from_records(results)
+    filename = os.path.join(args.results_dir, 'summary.csv')
+    df.to_csv(filename)
 
 
 #----> call main
@@ -49,38 +51,40 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     args.device = device
-    args.split_dir = "splits"
     args = get_custom_exp_code(args)
     seed_torch(args.seed)
 
-    settings = {'num_splits': args.k, 
-                'k_start': args.k_start,
-                'k_end': args.k_end,
-                'task': args.task,
-                'max_epochs': args.max_epochs, 
+    settings = {
+                'data_root_dir': args.data_root_dir, 
+                'split_dir': args.split_dir,
+                'csv_path': args.csv_fpath,
                 'results_dir': args.results_dir, 
-                'lr': args.lr,
-                'experiment': args.study,
-                'reg': args.reg,
-                'label_frac': args.label_frac,
-                'bag_loss': args.bag_loss,
-                'seed': args.seed,
                 'model_type': args.model_type,
-                "use_drop_out": args.drop_out,
+                'n_heads': args.n_heads,
+                'emb_dim': args.emb_dim,
+                'reg_type': args.reg_type,
+                'max_epochs': args.max_epochs, 
+                'lr': args.lr,
+                'seed': args.seed,
+                'drop_out': args.drop_out,
                 'weighted_sample': args.weighted_sample,
-                'opt': args.opt}
+                'opt': args.opt,
+                'batch_size': args.batch_size,
+                'early_stopping': args.early_stopping,
+                }
 
-    # #----> Outputs
-    create_results_dir(args)
-
-    #---> split dir
+    #---> Make sure directories/files exist
+    assert os.path.isdir(args.data_root_dir)
     assert os.path.isdir(args.split_dir)
-    print('split_dir: ', args.split_dir)
-    settings.update({'split_dir': args.split_dir})
+    assert os.path.isfile(args.csv_fpath)
+
+    #----> Outputs
+    create_results_dir(args)
 
     #----> create dataset factory (process omics and WSI to create graph)
     args.dataset_factory = PatchDatasetFactory(
-        data_dir=args.data_dir,
+        data_dir=args.data_root_dir,
+        csv_path=args.csv_fpath,
         split_dir=args.split_dir,
         seed = args.seed, 
         print_info = True
