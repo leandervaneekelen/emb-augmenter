@@ -17,7 +17,8 @@ class WSIDatasetFactory:
         csv_path,
         split_dir, 
         seed = 7, 
-        augmentation_type = None,
+        augmentation = None,
+        dagan = False,
         print_info = True
         ):
         r"""
@@ -37,7 +38,8 @@ class WSIDatasetFactory:
         self.num_classes = 6
         self.split_dir = split_dir
         self.seed = seed
-        self.augmentation_type = augmentation_type
+        self.augmentation = augmentation
+        self.dagan = dagan
         self.print_info = print_info
 
         #---> summarize
@@ -60,7 +62,7 @@ class WSIDatasetFactory:
 
         return train_split, val_split, test_split
 
-    def _get_split_from_df(self, all_splits: dict={}, split_key: str='train', augmentation_type=None, scaler=None):
+    def _get_split_from_df(self, all_splits: dict={}, split_key: str='train', scaler=None):
         split = all_splits[split_key]
         split = split.dropna().reset_index(drop=True)
         split = list(split.values)
@@ -74,8 +76,8 @@ class WSIDatasetFactory:
                 data_dir=self.data_dir,
                 labels=labels,
                 num_classes=self.num_classes,
-                split=split_key,
-                augmentation_type=augmentation_type
+                augmentation=self.augmentation,
+                dagan=self.dagan
             )
         else:
             split_dataset = None
@@ -89,8 +91,8 @@ class WSIDataset(Dataset):
         data_dir, 
         labels,
         num_classes=8,
-        split='train',
-        augmentation_type=None
+        augmentation=None,
+        dagan=False,
         ): 
 
         super(WSIDataset, self).__init__()
@@ -99,8 +101,8 @@ class WSIDataset(Dataset):
         self.data_dir = data_dir
         self.labels = labels
         self.num_classes = num_classes
-        self.split = split
-        self.augmentation_type = augmentation_type
+        self.augmentation = augmentation
+        self.dagan = dagan
 
     def __getitem__(self, idx):
 
@@ -115,19 +117,19 @@ class WSIDataset(Dataset):
         path = os.path.join(self.data_dir, '{}.pt'.format(slide_id))
         patch_embs = torch.load(path)
 
-        if self.augmentation_type is None:
+        if self.augmentation is None:
             return patch_embs[:, 0, :]  # get the original patch embedding
-        elif self.augmentation_type == 'combined':
+        elif self.augmentation == 'combined':
             aug_indices = np.random.choice([0, 6, 7, 8, 9], size=patch_embs.shape[0])  # get random mixed augmentation for each patch
-        elif self.augmentation_type == 'rotation':
+        elif self.augmentation == 'rotation':
             aug_indices = np.random.choice([0, 1], size=patch_embs.shape[0])  # get random augmentation for each patch
-        elif self.augmentation_type == 'hue':
+        elif self.augmentation == 'hue':
             aug_indices = np.random.choice([0, 2], size=patch_embs.shape[0])  # get random augmentation for each patch
-        elif self.augmentation_type == 'saturation':
+        elif self.augmentation == 'saturation':
             aug_indices = np.random.choice([0, 3], size=patch_embs.shape[0])  # get random augmentation for each patch
-        elif self.augmentation_type == 'value':
+        elif self.augmentation == 'value':
             aug_indices = np.random.choice([0, 4], size=patch_embs.shape[0])  # get random augmentation for each patch
-        elif self.augmentation_type == 'zoom':
+        elif self.augmentation == 'zoom':
             aug_indices = np.random.choice([0, 5], size=patch_embs.shape[0])  # get random augmentation for each patch
         else:
             raise ValueError("Augmentation not recognized.")

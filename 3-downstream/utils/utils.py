@@ -96,13 +96,14 @@ def get_custom_exp_code(args):
     dataset_path = 'datasets_csv'
     param_code = ''
 
-    #----> Augmentation type
-    if args.augmentation_type:
-        param_code += args.augmentation_type
+    #----> Augmentation
+    if args.augmentation:
+        param_code += args.augmentation
     else:
         param_code += "original"
-
-    param_code += "_" + datetime.now().strftime("%Y%m%d-%H%M%S")
+    
+    if args.dagan:
+        param_code += "_dagan"
 
     #----> Seed 
     param_code += "_s{}".format(args.seed)
@@ -112,6 +113,9 @@ def get_custom_exp_code(args):
 
     #----> Batch Size
     param_code += '_b%s' % str(args.batch_size)
+
+    #----> Time Stamp to make it unique
+    param_code += '_%s' % datetime.now().strftime("%Y%d%m_%H%M%S")
 
     #----> Updating
     args.param_code = param_code
@@ -202,8 +206,7 @@ def create_results_dir(args, results_root_dir):
         os.mkdir(args.results_dir)
 
 def print_and_log_experiment(args, settings):
-    fname = "experiment_" + args.param_code + ".txt"
-    with open(os.path.join(args.results_dir, fname), 'w') as f:
+    with open(args.results_dir + '/experiment_{}.txt'.format(args.param_code), 'w') as f:
         print(settings, file=f)
 
     f.close()

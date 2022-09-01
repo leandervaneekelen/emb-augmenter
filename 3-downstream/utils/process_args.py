@@ -18,12 +18,14 @@ def process_args():
     parser.add_argument('--early_stopping', action='store_true', default=False, help='enable early stopping')
     parser.add_argument('--opt', type=str, default="adam", help="Optimizer")
     parser.add_argument('--reg_type', type=str, default="None", help="regularization type [None, L1, L2]")
-    parser.add_argument('--drop_out', action='store_true', default=False, help='enabel dropout (p=0.25)')
+    parser.add_argument('--drop_out', action='store_true', default=False, help='enable dropout (p=0.25)')
     parser.add_argument('--weighted_sample', action='store_true', default=False, help='enable weighted sampling')
     parser.add_argument('--batch_size', type=int, default=1, help='batch_size')
 
     parser.add_argument('--num_runs', type=int, default=1, help='number of times to repeat experiment')
-    parser.add_argument('--augmentation_type', type=str, default=None, help="Augmentation type [None, 'combined', 'rotation', 'hue', 'sat', 'value', 'zoom']")
+    parser.add_argument('--augmentation', type=str, default=None, help='Augmentation type [None, combined, rotation, hue, sat, value, zoom]')
+    parser.add_argument('--dagan', action='store_true', default=False, help='Enable using DA-GAN as source for generated augmentations in training')
+
     parser.add_argument('--mlflow_exp_name', type=str, default='ABMIL', help='ABMIL, whatever to be created')
 
     args = parser.parse_args()
