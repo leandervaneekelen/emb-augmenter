@@ -2,6 +2,8 @@
 
 # ---------- ARGS ----------
 
+SEED=1
+
 # dagan
 DAGAN_REG_TYPE=None
 DAGAN_N_HEADS=4
@@ -33,6 +35,7 @@ while [ $# -gt 0 ] ; do
     --dagan_batch_size) DAGAN_BATCH_SIZE="$2" ;;
     --dagan_learning_rate) DAGAN_LEARNING_RATE="$2" ;;
     --dagan_drop_out) DAGAN_DROP_OUT="$2" ;;
+    --seed) SEED="$2" ;;
 
   esac
   shift
