@@ -44,7 +44,7 @@ done
 # ---------- VARIABLES ---------- 
 
 # files/directories
-DATA_ROOT_DIR="/media/disk2/proj_embedding_aug/extracted_mag40x_patch256_fp/resnet50_trunc_pt_patch_features/"
+DATA_ROOT_DIR="/media/disk1/proj_embedding_aug/extracted_mag40x_patch256_fp/resnet50_trunc_pt_patch_features/"
 CSV_FPATH="datasets_csv/labels.csv"
 SPLIT_DIR="splits/sicapv2/"
 RESULTS_DIR="sicapv2/"
@@ -71,6 +71,7 @@ DAGAN_RUN_CODE=$(
     --n_heads $DAGAN_N_HEADS \
     --emb_dim $DAGAN_EMB_DIM \
     --reg_type $DAGAN_REG_TYPE \
+    --seed $SEED \
     --early_stopping
 )
 
