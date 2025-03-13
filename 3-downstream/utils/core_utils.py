@@ -264,7 +264,7 @@ def validate(cur, epoch, model, loader, early_stopping, loss_fn=None, results_di
     total_metrics["loss"] /= len(loader)
     total_metrics["acc"] = total_correct / total_num
     total_metrics["kappa"] = metrics.cohen_kappa_score(y, y_preds, weights="quadratic")
-    
+
     # AUC
     auroc = AUROC(num_classes=6)
     preds = torch.stack(y_probs, dim=0).to(device)
@@ -273,7 +273,6 @@ def validate(cur, epoch, model, loader, early_stopping, loss_fn=None, results_di
     # log.debug(f"size preds: {preds.size()}")
     # log.debug(f"size target: {target.size()}")
     total_metrics["auc"] = auroc(preds, target)
-
 
     log.debug(
         "f{} e{}, {} | loss: {:.3f}, acc: {:.3f}, kappa: {:.3f}, auc: {:.3f}".format(
@@ -343,7 +342,7 @@ def summary(model, loader, loss_fn):
     total_metrics["loss"] /= len(loader)
     total_metrics["acc"] = total_correct / total_num
     total_metrics["kappa"] = metrics.cohen_kappa_score(y, y_preds, weights="quadratic")
-    
+
     # AUC
     auroc = AUROC(num_classes=6)
     preds = torch.stack(y_probs, dim=0).to(device)
@@ -352,7 +351,6 @@ def summary(model, loader, loss_fn):
     # log.debug(f"size preds: {preds.size()}")
     # log.debug(f"size target: {target.size()}")
     total_metrics["auc"] = auroc(preds, target)
-
 
     return total_metrics
 

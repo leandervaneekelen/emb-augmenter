@@ -3,8 +3,10 @@ import cv2
 import h5py
 import numpy as np
 import matplotlib.pyplot as plt
+
 # from PIL import Image
 from PIL import Image, ImageFile
+
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 from augmentations import aug_combined
@@ -25,9 +27,7 @@ with h5py.File(h5_path, "r") as f:
     coords = f["coords"][()]
     x, y = coords[0]
 
-    slide_path = os.path.join(
-        slide_dir, filename + ".png"
-    )
+    slide_path = os.path.join(slide_dir, filename + ".png")
     slide = Image.open(slide_path)
     slide.load()
     print(slide)
@@ -40,7 +40,9 @@ with h5py.File(h5_path, "r") as f:
 
     for i in range(20):
         aug_image = aug_combined(image=image)
-        Image.fromarray(aug_image).save(os.path.join(save_dir, f"images/img_aug{i}.png"))
+        Image.fromarray(aug_image).save(
+            os.path.join(save_dir, f"images/img_aug{i}.png")
+        )
 
 
 # with os.scandir(patches_path) as it:

@@ -51,6 +51,7 @@ def aug_rotation(image):
     )
     return transform(image=image)["image"]
 
+
 def aug_zoom(image):
     """Augment image with zoom percentage (int from -0.1 to +0.1)"""
 

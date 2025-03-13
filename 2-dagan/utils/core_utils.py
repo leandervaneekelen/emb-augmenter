@@ -14,8 +14,18 @@ from torch.autograd import Variable
 import numpy as np
 import mlflow
 import os
-from models.generator import GeneratorMLP, GeneratorTransformer, GeneratorIndependent, GeneratorIndependentFast
-from models.discriminator import DiscriminatorMLP, DiscriminatorTransformer, DiscriminatorIndependent, DiscriminatorIndependentFast
+from models.generator import (
+    GeneratorMLP,
+    GeneratorTransformer,
+    GeneratorIndependent,
+    GeneratorIndependentFast,
+)
+from models.discriminator import (
+    DiscriminatorMLP,
+    DiscriminatorTransformer,
+    DiscriminatorIndependent,
+    DiscriminatorIndependentFast,
+)
 from sksurv.metrics import concordance_index_censored
 
 import logging
@@ -157,7 +167,7 @@ def init_models(args):
             "net_G": GeneratorIndependent(),
             "net_D": DiscriminatorIndependent(),
         }
-    elif args.model_type == 'independent_fast':
+    elif args.model_type == "independent_fast":
         models = {
             "net_G": GeneratorIndependentFast(),
             "net_D": DiscriminatorIndependentFast(),

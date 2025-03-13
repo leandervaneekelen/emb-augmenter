@@ -168,7 +168,7 @@ class DiscriminatorIndependentFast(nn.Module):
             nn.ReLU(),
             nn.Linear(16, 8),
             nn.ReLU(),
-            nn.Linear(8, 1)
+            nn.Linear(8, 1),
         )
 
         # self.mlp = nn.Sequential(
@@ -185,7 +185,9 @@ class DiscriminatorIndependentFast(nn.Module):
                 - is_real: if it's real of x [B x 1024]
         """
         x, x_aug = x.unsqueeze(2), x_aug.unsqueeze(2)
-        data = torch.cat([x, x_aug], dim=2)  # concat original and augmentation: B x 1024 x 2
+        data = torch.cat(
+            [x, x_aug], dim=2
+        )  # concat original and augmentation: B x 1024 x 2
         data = torch.permute(data, (1, 0, 2))  # feature first
 
         # all_outputs = []
